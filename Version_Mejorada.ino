@@ -37,6 +37,7 @@ struct Cell {
 };
 
 Cell cells[8][8];
+Cell neighbors[4];
 
 struct Tuple {
   Cell TCell;
@@ -296,10 +297,10 @@ void updateValues() {
     // validate actualUpdateCell value
     if (checkCell.value != expectedValue && checkCell.value != 0) {
       checkCell.value = expectedValue;
-      //List<Cell> neighbors = getOpenNeighbors(checkCell.xCoord, checkCell.yCoord);
-      for (int i = 0; i < 0; /*neighbors.Count;*/ i++) {
+      int neighborsCount = getOpenNeighbors(checkCell.xCoord, checkCell.yCoord);
+      for (int i = 0; i <= neighborsCount; i++) {
         counter = counter + 1;
-        //[counter] = neighbors[i];
+        stack[counter] = neighbors[i];
         //stack.Push(neighbors[i]);
       }
     }
@@ -445,4 +446,30 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
       res.smallest = smallest;
       return res;
   }
+}
+
+int getOpenNeighbors(int currentX, int currentY){
+    int neighborsCount = 0;
+    // North 
+    if(currentX-1 > 0){
+      neighbors[neighborsCount] = cells[currentX-1][currentY];
+      neighborsCount = neighborsCount + 1;
+    }
+    // East 
+    if(currentY+1 < MAZESIZE){
+      neighbors[neighborsCount] = cells[currentX][currentY+1];
+      neighborsCount = neighborsCount + 1;
+    }
+    // West
+    if(currentY-1 >0){
+      neighbors[neighborsCount] = cells[currentX][currentY-1];
+      neighborsCount = neighborsCount + 1;
+    }
+
+    // South
+    if(currentX+1 < MAZESIZE){
+      neighbors[neighborsCount] = cells[currentX+1][currentY];
+      neighborsCount = neighborsCount + 1;
+    }
+    return neighborsCount; 
 }
