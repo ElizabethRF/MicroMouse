@@ -18,7 +18,7 @@
 
 double leftRead, rightRead, centerRead;
 double leftLimit, rightLimit, centerLimit;
-boolean leftWall, rightWall, frontWall;
+int leftWall, rightWall, frontWall;
 
 int initialX = 7;
 int initialY = 0;
@@ -47,7 +47,7 @@ struct Tuple {
 
 void setup() {
   startMaze();
-
+  //SETUP LISTO. Se puede iniciar el movimiento del micromouse 
   leftWall = rightWall = frontWall = false;
   Serial.begin(9600);  // baudios por segundo
   // determinar pines de entrada y salida
@@ -66,6 +66,8 @@ void setup() {
 }
 
 void loop() {
+  leftWall = rightWall = frontWall = 0; // set walls to false for reading 
+  
   // left
   leftRead = analogRead(SENSOR_I_RD);
   delay(5);
@@ -103,18 +105,21 @@ void loop() {
   delay(50);
 
   if (leftRead < leftLimit) {
-    leftWall = true;
+    leftWall = 1;
   }
 
   if (rightRead < rightLimit) {
-    rightWall = true;
+    rightWall = 1;
   }
 
   if (centerRead < centerLimit) {
-    frontWall = true;
+    frontWall = 1;
   }
 
-  explore(cells, leftWall, rightWall, frontWall);
+  if(cells[currentX][currentY].value != 0 ){
+    explore(cells, leftWall, rightWall, frontWall);
+  }
+  
 
 }
 
@@ -169,23 +174,55 @@ int * initialWalls(int x, int y) {
 
 }
 
-bool explore(Cell cells[][8], bool leftWall, bool rightWall, bool frontWall) {
-  while (cells[currentX][currentY].value != 0 ) {
-    switch (currentDir) {
-      case 'n':
-
-        break;
-      case 's':
-
-        break;
-      case 'e':
-
-        break;
-      case 'w':
-
-        break;
-    }
-    if (leftWall && rightWall && frontWall) {
+bool explore(Cell cells[8][8], int leftWall, int rightWall, int frontWall) {
+  switch (currentDir) {
+    case 'n':
+      // CURRENT CELL 
+      cells[currentX][currentY].walls[0] = frontWall;  // front north
+      cells[currentX][currentY].walls[2] = rightWall;  // right east
+      cells[currentX][currentY].walls[3] = leftWall;  // left west 
+      
+      // NEIGHBOR
+      cells[currentX - 1][currentY].walls[1] = frontWall; // front neighbor update south wall 
+      cells[currentX][currentY + 1].walls[3] = rightWall;// righ neighbor update west wall 
+      cells[currentX][currentY - 1].walls[2] = leftWall;// left neighbor update east wall 
+      break;
+      
+    case 's':
+      cells[currentX][currentY].walls[1] = frontWall;  // front south
+      cells[currentX][currentY].walls[3] = rightWall;  // right west
+      cells[currentX][currentY].walls[2] = leftWall;  // left east
+      
+      // NEIGHBOR
+      cells[currentX + 1][currentY].walls[0] = frontWall;// front neighbor update north wall 
+      cells[currentX][currentY - 1].walls[2] = rightWall;// righ neighbor update left wall 
+      cells[currentX][currentY + 1].walls[3] = leftWall;// left neighbor update right wall 
+      break;
+    case 'e':
+      // CURRENT CELL 
+      cells[currentX][currentY].walls[2] = frontWall;  // front east
+      cells[currentX][currentY].walls[1] = rightWall;  // right south
+      cells[currentX][currentY].walls[0] = leftWall;  // left north
+      
+      // NEIGHBOR
+      cells[currentX][currentY + 1].walls[3] = frontWall;// front neighbor update west wall 
+      cells[currentX + 1][currentY].walls[0] = rightWall;// righ neighbor update left wall 
+      cells[currentX - 1][currentY].walls[1] = leftWall;// left neighbor update right wall 
+      
+      break;
+    case 'w':
+      // CURRENT CELL 
+      cells[currentX][currentY].walls[3] = frontWall;  // front west
+      cells[currentX][currentY].walls[0] = rightWall;  // right north
+      cells[currentX][currentY].walls[1] = leftWall;  // left south 
+      
+      // NEIGHBOR
+      cells[currentX][currentY - 1].walls[2] = 1; // front neighbor update east wall 
+      cells[currentX - 1][currentY].walls[1] = 1;// righ neighbor update south wall 
+      cells[currentX + 1][currentY].walls[0] = 1;// left neighbor update north wall 
+      break;
+  }
+    if (leftWall+ rightWall+ frontWall > 0) {
       updateValues();
     }
     char newDir = getNextMove();
@@ -193,92 +230,9 @@ bool explore(Cell cells[][8], bool leftWall, bool rightWall, bool frontWall) {
       turnMM(currentDir, newDir);
     }
     //move();
-  }
   return true;
 }
 
-
-void addFrontWall() {
-  // add current and neighbor cell if not exist
-  switch (currentDir) {
-    case 'n':
-      addWallNorthNeighbor();
-      break;
-    case 's':
-      addWallSouthNeighbor();
-      break;
-    case 'e':
-      addWallEastNeighbor();
-      break;
-    case 'w':
-      addWallWestNeighbor();
-      break;
-  }
-}
-
-void addLeftWall() {
-  switch (currentDir) {
-    case 'n':
-      addWallWestNeighbor();
-      break;
-    case 's':
-      addWallEastNeighbor();
-      break;
-    case 'e':
-      addWallNorthNeighbor();
-      break;
-    case 'w':
-      addWallSouthNeighbor();
-      break;
-  }
-
-}
-
-void addRightWall() {
-  switch (currentDir) {
-    case 'n':
-      addWallEastNeighbor();
-      break;
-    case 's':
-      addWallWestNeighbor();
-      break;
-    case 'e':
-      addWallSouthNeighbor();
-      break;
-    case 'w':
-      addWallNorthNeighbor();
-      break;
-  }
-
-}
-
-void addWallNorthNeighbor() {
-  if (!cells[currentX][currentY].walls[0] != 0) { //North Wall
-    cells[currentX][currentY].walls[0] = 1; //North Wall
-    cells[currentX - 1][currentY].walls[1] = 1; //South Wall
-  }
-
-}
-void addWallSouthNeighbor() {
-  if (!cells[currentX][currentY].walls[1] != 0) { //South Wall
-    cells[currentX][currentY].walls[1] = 1; //South Wall
-    cells[currentX - 1][currentY].walls[0] = 1; //North Wall
-  }
-
-}
-void addWallEastNeighbor() {
-  if (!cells[currentX][currentY].walls[2] != 0) { //East Wall
-    cells[currentX][currentY].walls[2] = 1; //East Wall
-    cells[currentX - 1][currentY].walls[3] = 1; //West Wall
-  }
-}
-
-void addWallWestNeighbor() {
-  if (!cells[currentX][currentY].walls[3] != 0) { //West Wall
-    cells[currentX][currentY].walls[3] = 1; //West Wall
-    cells[currentX - 1][currentY].walls[2] = 1; //East Wall
-  }
-}
 
 void updateValues() {
   //Stack<Cell> stack  = new Stack<Cell>();
