@@ -26,6 +26,8 @@ int initialY = 0;
 int currentX = initialX;
 int currentY = initialY;
 
+boolean continueCode = true; 
+
 char currentDir = 'n';
 
 struct Cell {
@@ -115,9 +117,10 @@ void loop() {
   if (centerRead < centerLimit) {
     frontWall = 1;
   }
-
-  if(cells[currentX][currentY].value != 0 ){
-    explore(cells, leftWall, rightWall, frontWall);
+  
+  if(cells[currentX][currentY].value != 0 && continueCode){
+    continueCode = false; 
+    continueCode = explore(cells, leftWall, rightWall, frontWall);
   }
   
 
@@ -229,6 +232,7 @@ bool explore(Cell cells[8][8], int leftWall, int rightWall, int frontWall) {
     if (currentDir != newDir) {
       turnMM(currentDir, newDir);
     }
+    
     //move();
   return true;
 }
@@ -349,25 +353,25 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
 
   switch (currentDir) {
     case 'n':
-      if (walls[0] != 0) {
+      if (walls[0] == 0) {
         min = cells[currentX - 1][currentY].value;
         smallestCell = cells[currentX - 1][currentY];
       }
       break;
     case 's':
-      if (walls[1] != 0) {
+      if (walls[1] == 0) {
         min = cells[currentX + 1][currentY].value;
         smallestCell = cells[currentX + 1][currentY];
       }
       break;
     case 'e':
-      if (walls[2] != 0) {
+      if (walls[2] == 0) {
         min = cells[currentX][currentY + 1].value;
         smallestCell = cells[currentX][currentY + 1];
       }
       break;
     case 'w':
-      if (walls[3] != 0) {
+      if (walls[3] == 0) {
         min = cells[currentX][currentY - 1].value;
         smallestCell = cells[currentX][currentY - 1];
       }
@@ -376,25 +380,25 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
 
       // Compare otherneighbors values
       // compare north
-      if (walls[0] != 0 && min > cells[currentX - 1][currentY].value ) {
+      if (walls[0] == 0 && min > cells[currentX - 1][currentY].value ) {
         smallest = 'n';
         smallestCell = cells[currentX - 1][currentY];
         min = cells[currentX - 1][currentY].value;
       }
       // compare south
-      if (walls[1] != 0 && min > cells[currentX + 1][currentY].value ) {
+      if (walls[1] == 0 && min > cells[currentX + 1][currentY].value ) {
         smallest = 's';
         smallestCell = cells[currentX + 1][currentY];
         min = cells[currentX + 1][currentY].value;
       }
       // compare east
-      if (walls[2] != 0 && min > cells[currentX][currentY + 1].value ) {
+      if (walls[2] == 0 && min > cells[currentX][currentY + 1].value ) {
         smallest = 'e';
         smallestCell = cells[currentX][currentY + 1];
         min = cells[currentX][currentY + 1].value;
       }
       // compare west
-      if (walls[3] != 0 && min > cells[currentX][currentY - 1].value) {
+      if (walls[3] == 0 && min > cells[currentX][currentY - 1].value) {
         smallest = 'w';
         smallestCell = cells[currentX][currentY - 1];
         min = cells[currentX][currentY - 1].value;
