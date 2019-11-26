@@ -136,7 +136,7 @@ void startMaze() {
   int i;
   int j;
   for (i = 0; i < MAZESIZE; i++) {
-    for (j = 0; i < MAZESIZE; j++) {
+    for (j = 0; j < MAZESIZE; j++) {
       cells[i][j].value = startValue(i, j);
       int * resWalls = initialWalls(i, j); 
       cells[i][j].walls[0] = resWalls[0];
