@@ -50,7 +50,7 @@ struct Tuple {
 void setup() {
   startMaze();
   //SETUP LISTO. Se puede iniciar el movimiento del micromouse 
-  leftWall = rightWall = frontWall = false;
+  leftWall = rightWall = frontWall = 0;
   Serial.begin(9600);  // baudios por segundo
   // determinar pines de entrada y salida
   //ENTRADA
@@ -68,8 +68,6 @@ void setup() {
 }
 
 void loop() {
-  leftWall = rightWall = frontWall = 0; // set walls to false for reading 
-  
   // left
   leftRead = analogRead(SENSOR_I_RD);
   delay(5);
@@ -108,19 +106,27 @@ void loop() {
 
   if (leftRead < leftLimit) {
     leftWall = 1;
+  }else{
+    leftWall = 0;
   }
 
   if (rightRead < rightLimit) {
     rightWall = 1;
+  }else{
+    rightWall = 0;
   }
 
   if (centerRead < centerLimit) {
     frontWall = 1;
+  }else{
+    frontWall = 0;
   }
   
   if(cells[currentX][currentY].value != 0 && continueCode){
     continueCode = false; 
     continueCode = explore(cells, leftWall, rightWall, frontWall);
+  }else if(cells[currentX][currentY].value == 0){
+    // Done 
   }
   
 
@@ -220,20 +226,22 @@ bool explore(Cell cells[8][8], int leftWall, int rightWall, int frontWall) {
       cells[currentX][currentY].walls[1] = leftWall;  // left south 
       
       // NEIGHBOR
-      cells[currentX][currentY - 1].walls[2] = 1; // front neighbor update east wall 
-      cells[currentX - 1][currentY].walls[1] = 1;// righ neighbor update south wall 
-      cells[currentX + 1][currentY].walls[0] = 1;// left neighbor update north wall 
+      cells[currentX][currentY - 1].walls[2] = frontWall; // front neighbor update east wall 
+      cells[currentX - 1][currentY].walls[1] = rightWall;// righ neighbor update south wall 
+      cells[currentX + 1][currentY].walls[0] = leftWall;// left neighbor update north wall 
       break;
   }
     if (leftWall+ rightWall+ frontWall > 0) {
       updateValues();
     }
+    
     char newDir = getNextMove();
     if (currentDir != newDir) {
       turnMM(currentDir, newDir);
     }
+    currentDir = newDir; 
     
-    //move();
+    moveMM();
   return true;
 }
 
@@ -243,12 +251,12 @@ void updateValues() {
   Cell stack[100];
   int counter = 0;
   // push current cell
-  //stack.Push(cells[currentX][currentY]);
+  // stack.Push(cells[currentX][currentY]);
   counter = counter + 1;
   stack[counter] = cells[currentX][currentY];
   while (counter > 0) {
     // for top element of stack
-    //Cell checkCell = stack.Pop();
+    // Cell checkCell = stack.Pop();
     Cell checkCell = stack[counter];
     counter = counter - 1;
 
@@ -263,7 +271,7 @@ void updateValues() {
       for (int i = 0; i <= neighborsCount; i++) {
         counter = counter + 1;
         stack[counter] = neighbors[i];
-        //stack.Push(neighbors[i]);
+        // stack.Push(neighbors[i]);
       }
     }
   }
@@ -273,7 +281,6 @@ void updateValues() {
 char getNextMove() {
   // from neighbors (no walls between them) choose the smallest one
   char newDir = chooseSmallestNeighbor(currentX, currentY).smallest;
-
   return newDir;
 }
 
@@ -341,6 +348,23 @@ void turnMM(char currentDir, char newDir) {
   }
 }
 
+void moveMM(){
+    switch(currentDir){
+      case 'n':
+        currentX = currentX - 1; 
+        break;
+      case 's':
+        currentX = currentX + 1;
+        break; 
+      case 'e':
+        currentY = currentY + 1;
+        break;
+      case 'w': 
+        currentY = currentY - 1; 
+        break; 
+    }
+}
+
 Tuple chooseSmallestNeighbor(int currentX, int currentY) {
   char smallest = currentDir;
   Cell smallestCell = cells[currentX][currentY];
@@ -376,7 +400,6 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
         smallestCell = cells[currentX][currentY - 1];
       }
       break;
-
 
       // Compare otherneighbors values
       // compare north
