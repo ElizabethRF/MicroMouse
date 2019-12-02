@@ -400,6 +400,7 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
         smallestCell = cells[currentX][currentY - 1];
       }
       break;
+  }
 
       // Compare otherneighbors values
       // compare north
@@ -427,7 +428,6 @@ Tuple chooseSmallestNeighbor(int currentX, int currentY) {
         min = cells[currentX][currentY - 1].value;
       }
       
-  }
   Tuple res;
   res.TCell = smallestCell;
   res.smallest = smallest;
