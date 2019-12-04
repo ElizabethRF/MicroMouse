@@ -1,24 +1,47 @@
 #include <stdbool.h>
-#define MAZESIZE 8
+//#define MAZESIZE 8
 #include <stdlib.h>
 
-#define SENSOR_I_EN 2  // izquierda 
-#define SENSOR_D_EN 3  // derecha 
-#define SENSOR_C_EN 4  // centro 
+///////////////////////////////////////////////////////////////////////////////
 
-//  read
-#define SENSOR_I_RD A0  // izquierda 
-#define SENSOR_D_RD A1 // derecha 
-#define SENSOR_C_RD A2  // centro 
+#define RH_ENCODER_A 3 
+#define RH_ENCODER_B 12
+#define LH_ENCODER_A 2
+#define LH_ENCODER_B 8
 
-#define ENCODER_I_A 5  // izquierda a 
-#define ENCODER_I_B 6  // izquierda b 
-#define ENCODER_D_A 7  // derecha a 
-#define ENCODER_D_B 8  // derecha b 
+#define RH_Motor1 11 //
+#define RH_Motor2 9  //
+#define LH_Motor1 5  //
+#define LH_Motor2 6  //
 
-double leftRead, rightRead, centerRead;
-double leftLimit, rightLimit, centerLimit;
+#define RightSensor_EN 13
+#define LeftSensor_EN 7
+#define CenterSensor_EN 4
+
+#define RightSensor_RD A1
+#define LeftSensor_RD A2
+#define CenterSensor_RD A0
+
+#define DigitalIR A3
+///////////////////////////////////////////////////////////////////////////////
+
+volatile unsigned long leftCount = 0;
+volatile unsigned long rightCount = 0;
+int vel=40;  // global speed
+int tempRight=0;
+int tempLeft=0;
+int unit=45;  // how many tips per square
+int leftRead=0;
+int rightRead=0;
+int centerRead=0;
+int vmax=80;
+int asdf=0;
+int contCiclos=0;
 int leftWall, rightWall, frontWall;
+
+//////////////////////////////////////////////////////////////////////////////
+int MAZESIZE = 8;
+double leftLimit, rightLimit, centerLimit;
 
 int initialX = 7;
 int initialY = 0;
@@ -47,102 +70,235 @@ struct Tuple {
 };
 
 
-void setup() {
-  startMaze();
-  //SETUP LISTO. Se puede iniciar el movimiento del micromouse 
-  leftWall = rightWall = frontWall = 0;
-  Serial.begin(9600);  // baudios por segundo
-  // determinar pines de entrada y salida
-  //ENTRADA
-  // ENCODER
-  pinMode( ENCODER_I_A, INPUT);
-  pinMode( ENCODER_I_B, INPUT);
-  pinMode( ENCODER_D_A, INPUT);
-  pinMode( ENCODER_D_B, INPUT);
+void setup() { 
+  leftWall = rightWall = 1;
+  frontWall = 0;
+  
+  pinMode(RH_Motor1,OUTPUT);
+  pinMode(RH_Motor2,OUTPUT);
+  pinMode(LH_Motor1,OUTPUT);
+  pinMode(LH_Motor2,OUTPUT);
+  pinMode(LH_ENCODER_A, INPUT);
+  pinMode(LH_ENCODER_B, INPUT);
+  pinMode(RH_ENCODER_A, INPUT);
+  pinMode(RH_ENCODER_B, INPUT);
+  pinMode(RightSensor_EN,OUTPUT);
+  pinMode(LeftSensor_EN,OUTPUT);
+  pinMode(CenterSensor_EN,OUTPUT);
+  pinMode(DigitalIR,INPUT);
 
-  //SALIDA
-  //PAREDES
-  pinMode(SENSOR_I_EN, OUTPUT);
-  pinMode(SENSOR_D_EN, OUTPUT);
-  pinMode(SENSOR_C_EN, OUTPUT);
+  analogReference(INTERNAL);
+  
+  // initialize hardware interrupts
+  attachInterrupt(0, leftEncoderEvent, CHANGE);
+  attachInterrupt(1, rightEncoderEvent, CHANGE);
+  
+  Serial.begin(9600);
+
+  digitalWrite(RightSensor_EN,HIGH);
+  digitalWrite(LeftSensor_EN,HIGH);
+  digitalWrite(CenterSensor_EN,HIGH);
+
+  
+  startMaze();
+  //SETUP LISTO. Se puede iniciar el movimiento del micromouse
 }
 
 void loop() {
-  // left
-  leftRead = analogRead(SENSOR_I_RD);
-  delay(5);
 
-  digitalWrite(SENSOR_I_EN, HIGH);
-  delay(53);
-
-  leftRead = analogRead(SENSOR_I_RD) - leftRead;
-
-  digitalWrite(SENSOR_I_EN, LOW);
-  delay(50);
-
-  // right
-  rightRead = analogRead(SENSOR_D_RD);
-  delay(5);
-
-  digitalWrite(SENSOR_D_EN, HIGH);
-  delay(53);
-
-  rightRead = analogRead(SENSOR_D_RD) - rightRead;
-
-  digitalWrite(SENSOR_I_EN, LOW);
-  delay(50);
-
-  // center
-  centerRead = analogRead(SENSOR_C_RD);
-  delay(5);
-
-  digitalWrite(SENSOR_C_EN, HIGH);
-  delay(53);
-
-  leftRead = analogRead(SENSOR_C_RD) - centerRead;
-
-  digitalWrite(SENSOR_C_EN, LOW);
-  delay(50);
-
-  if (leftRead < leftLimit) {
-    leftWall = 1;
-  }else{
-    leftWall = 0;
-  }
-
-  if (rightRead < rightLimit) {
-    rightWall = 1;
-  }else{
-    rightWall = 0;
-  }
-
-  if (centerRead < centerLimit) {
-    frontWall = 1;
-  }else{
-    frontWall = 0;
-  }
+  readSensors();
   
   if(cells[currentX][currentY].value != 0 && continueCode){
     continueCode = false; 
     continueCode = explore(cells, leftWall, rightWall, frontWall);
-  }else if(cells[currentX][currentY].value == 0){
-    // Done 
   }
-  
 
 }
+
+// encoder event for the interrupt call
+void leftEncoderEvent() {
+  if (digitalRead(LH_ENCODER_A) == HIGH) {
+    if (digitalRead(LH_ENCODER_B) == LOW) {
+      leftCount--;
+    } else {
+      leftCount++;
+    }
+  } else {
+    if (digitalRead(LH_ENCODER_B) == LOW) {
+      leftCount++;
+    } else {
+      leftCount--;
+    }
+  }
+}
+ 
+// encoder event for the interrupt call
+void rightEncoderEvent() {
+  if (digitalRead(RH_ENCODER_A) == HIGH) {
+    if (digitalRead(RH_ENCODER_B) == LOW) {
+      rightCount++;
+    } else {
+      rightCount--;
+    }
+  } else {
+    if (digitalRead(RH_ENCODER_B) == LOW) {
+      rightCount--;
+    } else {
+      rightCount++;
+    }
+  }
+}
+
+void goForward() {
+ 
+    rightCount=0;
+    leftCount=0;
+    
+    tempRight=unit;
+    tempLeft=unit;
+
+    for(int q=0;q<115;q++){
+      if(digitalRead(DigitalIR)==0){
+        analogWrite(RH_Motor2,vel-3);
+        analogWrite(LH_Motor1,vel);
+      }else{
+        analogWrite(RH_Motor1,0);
+        analogWrite(LH_Motor1,vel);
+        analogWrite(RH_Motor2,vel-8);
+        analogWrite(LH_Motor2,0);
+      }
+      delay(5);
+    }
+   
+    STOP();
+    delay(1000);
+}
+
+void goBackward() {
+  analogWrite(RH_Motor1,vel);
+  analogWrite(RH_Motor2,0);
+  analogWrite(LH_Motor1,0);
+  analogWrite(LH_Motor2,vel);
+
+  delay(200);
+  STOP();
+}
+
+void STOP() {
+  analogWrite(RH_Motor1,0);
+  analogWrite(RH_Motor2,0);
+  analogWrite(LH_Motor1,0);
+  analogWrite(LH_Motor2,0);
+}
+
+int readFrontSensor(){
+  analogReference(DEFAULT);
+  digitalWrite(CenterSensor_EN,HIGH);
+  delay(1);
+  centerRead=analogRead(CenterSensor_RD);
+  
+  digitalWrite(CenterSensor_EN,LOW);
+  return(centerRead);
+}
+
+int readLeftSensor(){
+  analogReference(INTERNAL);
+  leftRead=analogRead(LeftSensor_RD);
+  return(leftRead);
+}
+
+int readRightSensor(){
+  analogReference(INTERNAL);
+  rightRead=analogRead(RightSensor_RD);
+  return(rightRead);
+}
+
+void turnRight(){
+  rightCount=0;
+  leftCount=0;
+
+  analogWrite(RH_Motor1,vel*0.86);
+  analogWrite(LH_Motor1,vel);
+  analogWrite(RH_Motor2,0);
+  analogWrite(LH_Motor2,0);
+  
+  delay(225);
+  STOP();
+  delay(500);
+  goForward();
+  
+}
+
+void turnLeft(){
+  rightCount=0;
+  leftCount=0;
+
+  analogWrite(RH_Motor1,0);
+  analogWrite(LH_Motor1,0);
+  analogWrite(RH_Motor2,vel*0.83);
+  analogWrite(LH_Motor2,vel);
+  
+  delay(235);
+  STOP();
+  delay(500);
+  goForward();
+  
+}
+
+void turnBack(){
+  analogWrite(RH_Motor1,0);
+  analogWrite(LH_Motor1,0);
+  analogWrite(RH_Motor2,vel*0.83);
+  analogWrite(LH_Motor2,vel);
+  
+  delay(440);
+  STOP();
+  delay(500);
+  goForward();
+}
+
+void readSensors(){
+  if(readRightSensor()>600){
+    rightWall=0;
+  }
+  else{
+    rightWall=1;
+  }
+  
+  if(readLeftSensor()>700){
+    leftWall=0;
+  }
+  else{
+    leftWall=1;
+  }
+  
+  if(readFrontSensor()>600){
+    frontWall=1;
+  }
+  else{
+    frontWall=0;
+  }
+}
+
 
 void startMaze() {
   int i;
   int j;
   for (i = 0; i < MAZESIZE; i++) {
-    for (j = 0; i < MAZESIZE; j++) {
+    for (j = 0; j < MAZESIZE; j++) {
       cells[i][j].value = startValue(i, j);
-      int * resWalls = initialWalls(i, j); 
-      cells[i][j].walls[0] = resWalls[0];
-      cells[i][j].walls[1] = resWalls[1];
-      cells[i][j].walls[2] = resWalls[2];
-      cells[i][j].walls[3] = resWalls[3];
+      if (i == 0) { // North
+        cells[i][j].walls[0] = 1;
+      }
+      if (i == MAZESIZE - 1) { // South
+        cells[i][j].walls[1] = 1;
+      }
+      if (j == MAZESIZE - 1) { // East
+        cells[i][j].walls[2] = 1;
+      }
+      if (j == 0) { // West
+        cells[i][j].walls[3] = 1;
+      }
       cells[i][j].xCoord = i;
       cells[i][j].yCoord = j;
     }
@@ -162,25 +318,6 @@ int startValue(int x, int y) {
   int yDiff = abs(centerY - y);
   int res = xDiff + yDiff;
   return res;
-}
-
-int * initialWalls(int x, int y) {
-  static int init[4];
-  if (x == 0) { // North
-    init[0] = 1;
-  }
-  if (x == MAZESIZE - 1) { // South
-    init[1] = 1;
-  }
-  if (y == MAZESIZE - 1) { // East
-    init[2] = 1;
-  }
-  if (y == 0) { // West
-    init[3] = 1;
-  }
-
-  return init;
-
 }
 
 bool explore(Cell cells[8][8], int leftWall, int rightWall, int frontWall) {
@@ -267,6 +404,7 @@ void updateValues() {
     // validate actualUpdateCell value
     if (checkCell.value != expectedValue && checkCell.value != 0) {
       checkCell.value = expectedValue;
+      cells[checkCell.xCoord][checkCell.yCoord].value=expectedValue;
       int neighborsCount = getOpenNeighbors(checkCell.xCoord, checkCell.yCoord);
       for (int i = 0; i <= neighborsCount; i++) {
         counter = counter + 1;
@@ -289,13 +427,13 @@ void turnMM(char currentDir, char newDir) {
     case 'n':
       switch (newDir) {
         case 'e':
-          //turnRight();
+          turnRight();
           break;
         case 'w':
-          //turnLeft();
+          turnLeft();
           break;
         case 's':
-          //turnBack();
+          turnBack();
           break;
       }
       break;
@@ -303,14 +441,14 @@ void turnMM(char currentDir, char newDir) {
     case 'e':
       switch (newDir) {
         case 'n':
-          //turnLeft();
+          turnLeft();
           break;
 
         case 'w':
-          //turnBack();
+          turnBack();
           break;
         case 's':
-          //turnRight();
+          turnRight();
           break;
       }
 
@@ -319,14 +457,14 @@ void turnMM(char currentDir, char newDir) {
     case 'w':
       switch (newDir) {
         case 'n':
-          //turnRight();
+          turnRight();
           break;
         case 'e':
-          //turnBack();
+          turnBack();
           break;
 
         case 's':
-          //turnLeft();
+          turnLeft();
           break;
       }
 
@@ -334,14 +472,14 @@ void turnMM(char currentDir, char newDir) {
     case 's':
       switch (newDir) {
         case 'n':
-          //turnBack();
+          turnBack();
           break;
         case 'e':
-          //turnRight();
+          turnRight();
           break;
 
         case 'w':
-          //turnLeft();
+          turnLeft();
           break;
       }
       break;
@@ -363,6 +501,7 @@ void moveMM(){
         currentY = currentY - 1; 
         break; 
     }
+    goForward();
 }
 
 Tuple chooseSmallestNeighbor(int currentX, int currentY) {
