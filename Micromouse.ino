@@ -44,7 +44,7 @@ int MAZESIZE = 8;
 double leftLimit, rightLimit, centerLimit;
 
 int initialX = 7;
-int initialY = 0;
+int initialY = 7;
 
 int currentX = initialX;
 int currentY = initialY;
@@ -225,7 +225,7 @@ void turnRight(){
   delay(225);
   STOP();
   delay(500);
-  goForward();
+  //goForward();
   
 }
 
@@ -241,7 +241,7 @@ void turnLeft(){
   delay(235);
   STOP();
   delay(500);
-  goForward();
+  //goForward();
   
 }
 
@@ -251,10 +251,10 @@ void turnBack(){
   analogWrite(RH_Motor2,vel*0.83);
   analogWrite(LH_Motor2,vel);
   
-  delay(440);
+  delay(410);
   STOP();
   delay(500);
-  goForward();
+  //goForward();
 }
 
 void readSensors(){
@@ -265,7 +265,7 @@ void readSensors(){
     rightWall=1;
   }
   
-  if(readLeftSensor()>700){
+  if(readLeftSensor()>600){
     leftWall=0;
   }
   else{
@@ -443,7 +443,6 @@ void turnMM(char currentDir, char newDir) {
         case 'n':
           turnLeft();
           break;
-
         case 'w':
           turnBack();
           break;
@@ -462,7 +461,6 @@ void turnMM(char currentDir, char newDir) {
         case 'e':
           turnBack();
           break;
-
         case 's':
           turnLeft();
           break;
@@ -475,11 +473,10 @@ void turnMM(char currentDir, char newDir) {
           turnBack();
           break;
         case 'e':
-          turnRight();
-          break;
-
-        case 'w':
           turnLeft();
+          break;
+        case 'w':
+          turnRight();
           break;
       }
       break;
